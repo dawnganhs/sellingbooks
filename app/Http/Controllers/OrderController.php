@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Order;
-use Illuminate\Http\Request;
 use App\Http\Controllers\API\APIBaseController as APIBaseController;
-use Validator;
+use App\Order;
+use App\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends APIBaseController
 {
@@ -14,19 +15,13 @@ class OrderController extends APIBaseController
      *
      * @return \Illuminate\Http\Response
      */
-    public function ChangeStatusOrder(Request $request, $id)
-    {
-        $order = Order::find($id);
-        if(is_null($order)){
-            return $this->sendError('Order not found.');
-        }
-        $order->status = $request->status;
-        $order->save();
-        return $this->sendResponse($order->toArray(), 'Order updated successfully');
-    }
     public function index()
     {
-        //
+        $orders = Order::paginate(20);
+        if (is_null($orders)) {
+            return $this->Error('Found 0 orders !');
+        }
+        return $this->sendData($orders->toArray());
     }
 
     /**
@@ -47,7 +42,12 @@ class OrderController extends APIBaseController
      */
     public function store(Request $request)
     {
-        //
+        $order = new Order;
+        $order->total = $request->total;
+        $order->status = $request->status;
+        $order->id_user = Auth::guard('api')->id();
+        $order->save();
+        return $this->sendResponse($order, 'Ordered successfully !');
     }
 
     /**
@@ -56,9 +56,43 @@ class OrderController extends APIBaseController
      * @param  \App\Order  $order
      * @return \Illuminate\Http\Response
      */
-    public function show(Order $order)
+    public function show($id)
     {
-        //
+        $order = Order::find($id);
+        if (is_null($order)) {
+            return $this->sendError('Order not found !');
+        } else {
+            return $this->sendData($order->toArray());
+        }
+    }
+
+    public function showOrderUser()
+    {
+        $orders = Order::where('id_user', Auth::guard('api')->id())->get();
+        if (is_null($orders)) {
+            return $this->sendError('You are have 0 !');
+        } else {
+            return $this->sendData($orders->toArray());
+        }
+    }
+
+    public function deleteOrderUser($id)
+    {
+        $user = User::where('id', Auth::guard('api')->id())->first();
+        $order = Order::find($id);
+        if (is_null($order)) {
+            return $this->sendError('Order not found !');
+        }
+        if ($order->status !== 'accept') {
+            if ($user->id == $order->id_user) {
+                $order->delete();
+                return $this->sendResponse($id, 'Just deleted your order !');
+            } else {
+                return $this->sendError('Cannot delete order of another user !');
+            }
+        } elseif ($order->status == 'accept') {
+            return $this->sendMessage('Your order has been approved ! You cannot cancel this order !');
+        }
     }
 
     /**
@@ -67,11 +101,6 @@ class OrderController extends APIBaseController
      * @param  \App\Order  $order
      * @return \Illuminate\Http\Response
      */
-    public function edit(Order $order)
-    {
-        //
-    }
-
     /**
      * Update the specified resource in storage.
      *
@@ -79,9 +108,16 @@ class OrderController extends APIBaseController
      * @param  \App\Order  $order
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Order $order)
+    public function update(Request $request, $id)
     {
-        //
+        $order = Order::find($id);
+        if (is_null($order)) {
+            return $this->sendError('Order not found.');
+        }
+        $order->status = $request->status;
+        $order->id_user = Auth::guard('api')->id();
+        $order->save();
+        return $this->sendResponse($order->toArray(), 'Order updated successfully');
     }
 
     /**
@@ -90,8 +126,14 @@ class OrderController extends APIBaseController
      * @param  \App\Order  $order
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Order $order)
+    public function destroy($id)
     {
-        //
+        $order = Order::find($id);
+        if (is_null($order)) {
+            return $this->sendError('Order not found !');
+        } else {
+            $order->delete();
+            return $this->sendResponse($id, 'Deleted successfully !');
+        }
     }
 }

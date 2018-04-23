@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Thanh Khe, Da Nang',
                 'phone' => '0123456789',
                 'role' => '1',
+                'api_token' => str_random(60),
 
             ],
             [
@@ -48,6 +49,7 @@ class DatabaseSeeder extends Seeder
                 'address' => 'Thanh Khe, Da Nang',
                 'phone' => '0123456789',
                 'role' => '0',
+                'api_token' => str_random(60),
 
             ],
         ]);
