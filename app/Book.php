@@ -12,11 +12,11 @@ class Book extends Model
 
     public function category()
     {
-        return $this->belongsTo('App\Category', 'id_categories');
+        return $this->belongsTo('App\Category', 'id_category');
     }
     public function author()
     {
-        return $this->belongsTo('App\Author', 'id_authors');
+        return $this->belongsTo('App\Author', 'id_author');
     }
     public function tags()
     {

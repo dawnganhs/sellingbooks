@@ -2,56 +2,56 @@
 
 namespace App\Http\Controllers;
 
-use App\Book;
 use App\Author;
+use App\Book;
+use App\Category;
+use App\Http\Controllers\API\APIBaseController as APIBaseController;
 use Illuminate\Http\Request;
 
-class PageController extends Controller
+class PageController extends APIBaseController
 {
     public function GetHighligtsBook()
     {
-        return Book::where('highlights', 1)->get();
+        $books = Book::where('highlights', 1)->get();
+        if (count($books) < 1) {
+            return $this->sendMessage('Found 0 highlights book.');
+        }
+        return $this->sendData($books->toArray());
     }
 
-    public function GetNewBook()
+    public function GetNewBook(Request $request)
     {
-        return Book::whereDay('created_at', '<', '31')->get();
+        $books = Book::whereBetween('created_at', [$request->startday, $request->finishday])->paginate(15);
+        if (count($books) < 1) {
+            return $this->sendMessage('Found 0 new book.');
+        }
+        return $this->sendData($books->toArray());
     }
 
-    public function FindEveryThing(Request $request)
+    public function index(Request $request)
     {
         if ($request->name) {
             if ($request->select == 'book') {
-                return Book::where([
+                $books = Book::where([
                     ['name', 'LIKE', '%' . $request->name . '%'],
-                ])->get();
-            } elseif ($request->select == 'author'){
-                return Author::where([
+                ])->paginate(20);
+                return $this->sendData($books->toArray());
+            } elseif ($request->select == 'author') {
+                $authors = Author::get();
+                $books = Book::where('id_author', $request->id_author)->where([
                     ['name', 'LIKE', '%' . $request->name . '%'],
-                ]);
-                
+                ])->paginate(20);
+                return $this->sendData(['authors' => $authors, 'books' => $books]);
+            } elseif ($request->select == 'category') {
+                $categories = Category::get();
+                $books = Book::where('id_category', $request->id_category)->where([
+                    ['name', 'LIKE', '%' . $request->name . '%'],
+                ])->paginate(20);
+                return $this->sendData(['categories' => $categories, 'books' => $books]);
             }
+        } else {
+            $books = Book::paginate(20);
+            return $this->sendData($books->toArray());
         }
-        //     elseif ($request->select == 'author') {
-        //         $author = Author::find($request->name);
-        //         $books = $author->books()->get();
-        //     } elseif ($request->select == 'category') {
-        //         $books = Category::where([
-        //             ['name', 'LIKE', '%' . $request->select . '%'],
-        //         ])->with('books')->get();
-        //     }
-        // } else {
-        //     $book = Book::where([
-        //         ['name', 'LIKE', '%' . $request->name . '%'],
-        //     ])->get();
-        // }
-        // $select = null;
-        // $books = Book::when($select, function ($query) use ($select) {
-        //             return $query->where('id_author')->orWhere('id_category');
-        //         }, function ($query) {
-        //             return $query->orderBy('name');
-        //         })
-        //         ->get();
-
     }
 }

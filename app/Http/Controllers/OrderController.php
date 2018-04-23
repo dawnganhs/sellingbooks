@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Order;
 use Illuminate\Http\Request;
+use App\Http\Controllers\API\APIBaseController as APIBaseController;
+use Validator;
 
-class OrderController extends Controller
+class OrderController extends APIBaseController
 {
     /**
      * Display a listing of the resource.
@@ -14,10 +16,13 @@ class OrderController extends Controller
      */
     public function ChangeStatusOrder(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::find($id);
+        if(is_null($order)){
+            return $this->sendError('Order not found.');
+        }
         $order->status = $request->status;
         $order->save();
-        return response()->json($order, 200);
+        return $this->sendResponse($order->toArray(), 'Order updated successfully');
     }
     public function index()
     {

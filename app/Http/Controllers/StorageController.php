@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\API\APIBaseController as APIBaseController;
 use App\Storage;
 use Illuminate\Http\Request;
+use Validator;
 
-class StorageController extends Controller
+class StorageController extends APIBaseController
 {
     /**
      * Display a listing of the resource.
@@ -14,7 +16,11 @@ class StorageController extends Controller
      */
     public function index()
     {
-        return Storage::all();
+        $storage = Storage::paginate(15);
+        if (count($storage) < 1) {
+            return $this->sendMessage('Found 0 storage');
+        }
+        return $this->sendData($storage->toArray());
     }
 
     /**
@@ -31,8 +37,19 @@ class StorageController extends Controller
      */
     public function store(Request $request)
     {
-        $storage = Storage::create($request->all());
-        return response()->json($storage, 201);
+        $input = $request->all();
+        $validator = Validator::make($input, [
+            'quantity' => 'required',
+            'id_book' => 'required',
+        ], [
+            'quantity.required' => 'Please enter quantity',
+            'id_book.required' => 'Please choose book',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+        $storage = Storage::create($input);
+        return $this->sendResponse($storage->toArray(), 'Entered successfully');
     }
 
     /**
@@ -43,7 +60,11 @@ class StorageController extends Controller
      */
     public function show($id)
     {
-        return Storage::find($id);
+        $storage = Storage::find($id);
+        if(is_null($storage)){
+            return $this->sendError('Storage not found.');
+        }
+        return $this->sendData($storage->toArray());
     }
 
     /**
@@ -62,9 +83,25 @@ class StorageController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $storage = Storage::findOrFail($id);
-        $storage->update($request->all());
-        return response()->json($storage, 200);
+        $storage = Storage::find($id);
+        if(is_null($storage)){
+            return $this->sendError('Storage not found.');
+        }
+        $input = $request->all();
+        $validator = Validator::make($input, [
+            'quantity' => 'required',
+            'id_book' => 'required',
+        ], [
+            'quantity.required' => 'Please enter quantity',
+            'id_book.required' => 'Please choose book',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+        $storage->quantity = $input['quantity'];
+        $storage->id_book = $input['id_book'];
+        $storage->save();
+        return $this->sendResponse($storage->toArray(), 'Storage updated successfully');
     }
 
     /**
@@ -75,9 +112,11 @@ class StorageController extends Controller
      */
     public function destroy($id)
     {
-        $storage = Storage::findOrFail($id);
+        $storage = Storage::find($id);
+        if(is_null($storage)){
+            return $this->sendError('Storage not found.');
+        }
         $storage->delete();
-
-        return response()->json(null, 204);
+        return $this->sendResponse($id, 'Storage deleted successfully');
     }
 }

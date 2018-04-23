@@ -1,11 +1,13 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Author;
+use App\Controllers\Controller;
+use App\Http\Controllers\API\APIBaseController as APIBaseController;
 use Illuminate\Http\Request;
+use Validator;
 
-class AuthorController extends Controller
+class AuthorController extends APIBaseController
 {
     /**
      * Display a listing of the resource.
@@ -14,7 +16,11 @@ class AuthorController extends Controller
      */
     public function index()
     {
-        return Author::all();
+        $author = Author::paginate(15);
+        if(count($author)<1){
+            return $this->sendMessage('Found 0 author');
+        }
+        return $this->sendData($author->toArray());
     }
 
     /**
@@ -31,14 +37,31 @@ class AuthorController extends Controller
      */
     public function store(Request $request)
     {
-        $author = Author::create($request->all());
+        $input = $request->all();
+        $db_author = Author::get();
+        foreach($db_author as $result){
+            if($result->slug == $request->slug){
+                return $this->sendError('This author already exits !');
+            }
+        }
+        $validator = Validator::make($input, [
+            'name' => 'required',
+            'slug' => 'required'
+        ],[
+            'name.required' => 'Please enter name',
+            'slug.required' => 'Please enter slug'
+        ]);
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        }
+        $author = Author::create($input);
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             $file->move('./images', $file->getClientOriginalName('avatar'));
             $avatar = $file->getClientOriginalName('avatar');
             $author->update(['avatar' => $avatar]);
         }
-        return response()->json($author, 201);
+        return $this->sendResponse($author->toArray(), 'Author created successfully.');
 
     }
 
@@ -50,7 +73,11 @@ class AuthorController extends Controller
      */
     public function show($id)
     {
-        return Author::find($id);
+        $author = Author::find($id);
+        if (is_null($author)) {
+            return $this->sendError('Author not found.');
+        }
+        return $this->sendData($author->toArray());
     }
 
     /**
@@ -69,15 +96,41 @@ class AuthorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $author = Author::findOrFail($id);
-        $author->update($request->all());
+        $author = Author::find($id);
+        if (is_null($author)) {
+            return $this->sendError('Author not found.');
+        }
+        $input = $request->all();
+        $db_author = Author::get();
+        foreach($db_author as $result){
+            if($result->slug == $request->slug){
+                return $this->sendError('This author already exits !');
+            }
+        }
+        $validator = Validator::make($input, [
+            'name' => 'required',
+            'slug' => 'required',
+        ],[
+            'name.required' => 'Please enter name',
+            'slug.required' => 'Please enter slug',
+        ]);
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());       
+        }
+        $author->name = $input['name'];
+        $author->slug = $input['slug'];
+        $author->description = $input['description'];
+        $author->phone = $input['phone'];
+        $author->address = $input['address'];
+        $author->email = $input['email'];
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             $file->move('./images', $file->getClientOriginalName('avatar'));
             $avatar = $file->getClientOriginalName('avatar');
-            $author->update(['avatar' => $avatar]);
+            $author->avatar = $avatar;
         }
-        return response()->json($author, 200);
+        $author->save();
+        return $this->sendResponse($author->toArray(), 'Author updated successfully.');
     }
 
     /**
@@ -88,8 +141,11 @@ class AuthorController extends Controller
      */
     public function destroy($id)
     {
-        $author = Author::findOrFail($id);
+        $author = Author::find($id);
+        if(is_null($author)){
+            return $this->sendError('Author not found.');
+        }
         $author->delete();
-        return response()->json(null, 204);
+        return $this->sendResponse($id, 'Author deleted successfully.');
     }
 }

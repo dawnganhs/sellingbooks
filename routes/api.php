@@ -12,27 +12,25 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
  */
-Route::resource('/admin/authors', 'AuthorController');
+Route::post('/register', 'UserController@register');
+Route::post('/login', 'UserController@login');
 
-Route::resource('/admin/books', 'BookController');
+    Route::resource('/admin/authors', 'AuthorController');
+    Route::resource('/admin/books', 'BookController');
+    Route::resource('/admin/categories', 'CategoryController');
+    Route::get('/admin/listwithcategory', 'CategoryController@listwithcategory');
 
-Route::resource('/admin/categories', 'CategoryController');
-Route::get('/admin/listwithcategory', 'CategoryController@listwithcategory');
+    Route::resource('/admin/storages', 'StorageController');
+    Route::resource('/admin/tags', 'TagController');
+    Route::resource('/admin/users', 'UserController');
+    Route::put('/admin/changeorderstatus/{id}', 'OrderController@ChangeStatusOrder');
 
-Route::resource('/admin/storages', 'StorageController');
-
-Route::resource('/admin/tags', 'TagController');
-
-Route::resource('/admin/users', 'UserController');
-
-Route::put('/admin/changeorderstatus/{id}', 'OrderController@ChangeStatusOrder');
+    Route::get('/user-info', 'UserController@getUserInfo');
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-
-
 Route::get('/book/highlights', 'PageController@GetHighligtsBook');
 Route::get('/book/newbook', 'PageController@GetNewBook');
-Route::get('/search', 'PageController@FindEveryThing');
+Route::resource('/pages', 'PageController');

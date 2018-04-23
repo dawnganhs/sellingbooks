@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Category;
-use App\Book;
+use App\Http\Controllers\API\APIBaseController as APIBaseController;
 use Illuminate\Http\Request;
+use Validator;
 
-class CategoryController extends Controller
+class CategoryController extends APIBaseController
 {
     /**
      * Display a listing of the resource.
@@ -15,7 +16,11 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        return Category::all();
+        $categories = Category::paginate(10);
+        if (count($categories) < 1) {
+            return $this->sendMessage('Found 0 categories');
+        }
+        return $this->sendData($categories->toArray());
     }
 
     /**
@@ -32,8 +37,28 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-        $category = Category::create($request->all());
-        return response()->json($category, 201);
+        $db_cate = Category::get();
+        foreach ($db_cate as $result) {
+            if ($request->slug == $result->slug) {
+                return $this->sendError('This category already exits, please enter another name & slug !');
+            }
+        }
+        $input = $request->all();
+        $validator = Validator::make($input, [
+            'name' => 'required',
+            'slug' => 'required',
+            'description' => 'required',
+        ], [
+            'name.required' => 'Please enter name',
+            'slug.required' => 'Please enter slug',
+            'description.required' => 'Please enter description',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+        $category = Category::create($input);
+        $category->save();
+        return $this->sendResponse($category->toArray(), 'Category created successfully');
     }
 
     /**
@@ -44,7 +69,11 @@ class CategoryController extends Controller
      */
     public function show($id)
     {
-        return Category::find($id);
+        $category = Category::find($id);
+        if (is_null($category)) {
+            return $this->sendError('Category not found.');
+        }
+        return $this->sendData($category->toArray());
     }
 
     /**
@@ -63,9 +92,36 @@ class CategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $category = Category::findOrFail($id);
-        $category->update($request->all());
-        return response()->json($category, 200);
+        $category = Category::find($id);
+        if (is_null($category)) {
+            return $this->sendError('Category not found.');
+        }
+        if($category->slug !== $request->slug){
+            $db_cate = Category::get();
+            foreach($db_cate as $result){
+                if($request->slug == $result->slug){
+                    return $this->sendError('This category already exits, please enter another name & slug !');
+                }
+            }
+        }
+        $input = $request->all();
+        $validator = Validator::make($input, [
+            'name' => 'required',
+            'slug' => 'required',
+            'description' => 'required',
+        ], [
+            'name.required' => 'Please enter name',
+            'slug.required' => 'Please enter slug',
+            'description.required' => 'Please enter description',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+        $category->name = $input['name'];
+        $category->slug = $input['slug'];
+        $category->description = $input['description'];
+        $category->save();
+        return $this->sendResponse($category->toArray(), 'Category updated successfully');
     }
 
     /**
@@ -76,14 +132,17 @@ class CategoryController extends Controller
      */
     public function destroy($id)
     {
-        $category = Category::findOrFail($id);
+        $category = Category::find($id);
+        if (is_null($category)) {
+            return $this->sendError('Category not found.');
+        }
         $category->delete();
-
-        return response()->json(null, 204);
+        return $this->sendResponse($id, 'Category deleted successfully');
     }
 
     public function listwithcategory()
     {
-        return Category::withCount('books')->get();
+        $countbook = Category::withCount('books')->paginate(10);
+        return $this->sendData($countbook->toArray());
     }
 }
