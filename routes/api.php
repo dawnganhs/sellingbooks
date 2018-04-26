@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
-
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -13,29 +11,30 @@ use Illuminate\Http\Request;
 |
  */
 Route::post('/register', 'UserController@create');
-Route::post('/login', 'UserController@login');
-Route::get('/logout', 'UserController@logout')->name('logout');
+Route::post('/login', 'UserController@login')->name('login');
 
-Route::group(['middleware' => 'ProtectedAdminLoginMiddleware'], function(){
-
-    Route::get('/add-to-cart/{id}', 'CartController@addtoCart')->name('addtoCart');
+Route::group(['middleware' => 'ProtectedUserLogin'], function () {
+    
+    Route::get('/logout', 'UserController@logout')->name('logout');
+    Route::get('/your-orders', 'OrderController@showOrderUser');
     Route::get('/delete-your-order/{id}', 'OrderController@deleteOrderUser');
     Route::put('/edit-your-profile', 'UserController@update');
     Route::get('/your-profile', 'UserController@show');
-    Route::get('/your-orders', 'OrderController@showOrderUser');
+    Route::post('/finish-checkout', 'PageController@checkout');
+    Route::get('/delete-all-your-order', 'OrderController@deleteAllOrderUser');
+});
+
+Route::group(['middleware' => 'ProtectedAdminLoginMiddleware'], function () {
+
+    Route::get('/admin/total', 'OrderController@Total');
     Route::resource('/admin/orders', 'OrderController');
     Route::resource('/admin/authors', 'AuthorController');
     Route::resource('/admin/books', 'BookController');
     Route::resource('/admin/categories', 'CategoryController');
-    Route::get('/admin/listwithcategory', 'CategoryController@listwithcategory');
-
+    Route::get('/admin/categorycountbooks', 'CategoryController@categorywithcountbooks');
     Route::resource('/admin/storages', 'StorageController');
     Route::resource('/admin/tags', 'TagController');
     Route::resource('/admin/users', 'UserController');
-});
-
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
 });
 
 Route::get('/book/highlights', 'PageController@GetHighligtsBook');

@@ -140,7 +140,7 @@ class CategoryController extends APIBaseController
         return $this->sendResponse($id, 'Category deleted successfully');
     }
 
-    public function listwithcategory()
+    public function categorywithcountbooks()
     {
         $countbook = Category::withCount('books')->paginate(10);
         return $this->sendData($countbook->toArray());

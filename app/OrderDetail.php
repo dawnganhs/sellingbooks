@@ -4,7 +4,7 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Order_derail extends Model
+class OrderDetail extends Model
 {
     protected $fillable = [
         'id', 'cost', 'qty', 'id_order', 'id_book'

@@ -3,7 +3,6 @@ namespace App\Http\Controllers;
 
 use App\Author;
 use App\Http\Controllers\API\APIBaseController as APIBaseController;
-use App\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Validator;
@@ -24,7 +23,6 @@ class AuthorController extends APIBaseController
         return $this->sendData($author->toArray());
     }
 
-    
     /**
      * Show the form for creating a new resource.
      *
@@ -40,29 +38,33 @@ class AuthorController extends APIBaseController
     public function store(Request $request)
     {
         $input = $request->all();
-        $db_author = Author::get();
-        foreach ($db_author as $result) {
-            if ($result->slug == $request->slug) {
-                return $this->sendError('This author already exits !');
-            }
-        }
         $validator = Validator::make($input, [
-            'name' => 'required',
-            'slug' => 'required',
+            'name' => 'required|unique:authors',
+            'phone' => 'unique:authors',
+            'email' => 'unique:authors',
         ], [
             'name.required' => 'Please enter name',
-            'slug.required' => 'Please enter slug',
+            'name.unique' => 'Name already for another auuthor ! Please enter another name.',
+            'phone.unique' => 'Phone already for another author ! Please enter another phone.',
+            'email.unique' => 'Email already for another author ! Please enter another email.',
         ]);
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-        $author = Author::create($input);
+        $author = new Author;
+        $author->name = $input['name'];
+        $author->slug = str_slug($author->name);
+        $author->description = $input['description'];
+        $author->phone = $input['phone'];
+        $author->address = $input['address'];
+        $author->email = $input['email'];
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
             $file->move('./images', $file->getClientOriginalName('avatar'));
             $avatar = $file->getClientOriginalName('avatar');
-            $author->update(['avatar' => $avatar]);
+            $author->avatar = $avatar;
         }
+        $author->save();
         return $this->sendResponse($author->toArray(), 'Author created successfully.');
 
     }
@@ -103,24 +105,28 @@ class AuthorController extends APIBaseController
             return $this->sendError('Author not found.');
         }
         $input = $request->all();
-        $db_author = Author::get();
-        foreach ($db_author as $result) {
-            if ($result->slug == $request->slug) {
-                return $this->sendError('This author already exits !');
-            }
-        }
         $validator = Validator::make($input, [
             'name' => 'required',
-            'slug' => 'required',
         ], [
             'name.required' => 'Please enter name',
-            'slug.required' => 'Please enter slug',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors());
+        }
+        $validator = Validator::make($input, [
+            'name' => 'unique:authors,name,' . $author->id,
+            'phone' => 'unique:authors,phone,' . $author->id,
+            'email' => 'unique:authors,email,' . $author->id,
+        ], [
+            'name.unique' => 'Name already for another author ! Please enter another name.',
+            'phone.unique' => 'Phone already for another author ! Please enter another name.',
+            'email.unique' => 'Email already for another author ! Please enter another name.',
         ]);
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
         $author->name = $input['name'];
-        $author->slug = $input['slug'];
+        $author->slug = str_slug($author->name);
         $author->description = $input['description'];
         $author->phone = $input['phone'];
         $author->address = $input['address'];

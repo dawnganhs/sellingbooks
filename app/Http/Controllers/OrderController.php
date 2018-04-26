@@ -95,6 +95,13 @@ class OrderController extends APIBaseController
         }
     }
 
+    public function deleteAllOrderUser()
+    {
+        $user = User::with('orders')->find(Auth::guard('api')->id());
+        $user->orders()->delete();
+        return $this->sendResponse($user->orders(), 'Deleted successfully !');
+    }
+
     /**
      * Show the form for editing the specified resource.
      *
@@ -135,5 +142,24 @@ class OrderController extends APIBaseController
             $order->delete();
             return $this->sendResponse($id, 'Deleted successfully !');
         }
+    }
+
+    public function Total(Request $request)
+    {
+        if ($request->startday && $request->finishday && $request->month && $request->year) {
+            return $this->sendError('Please check it with day to day, month/year or just year !');
+        }
+        if ($request->startday && $request->finishday) {
+            $total = Order::whereBetween('created_at', [$request->startday, $request->finishday])->sum('total');
+            return $this->sendResponse($total, 'Total in ' . $request->startday . ' to ' . $request->finishday);
+        } elseif ($request->month && $request->year) {
+            $total = Order::whereMonth('created_at', $request->month)->whereYear('created_at', $request->year)->sum('total');
+            return $this->sendResponse($total, 'Total in ' . $request->month . '/' . $request->year);
+        } elseif ($request->year) {
+            $total = Order::whereYear('created_at', $request->year)->sum('total');
+            return $this->sendResponse($total, 'Total in ' . $request->year);
+        }
+        $total = Order::sum('total');
+        return $this->sendResponse($total, 'Total revenue');
     }
 }

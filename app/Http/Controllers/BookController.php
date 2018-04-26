@@ -6,6 +6,7 @@ use App\Book;
 use App\Http\Controllers\API\APIBaseController as APIBaseController;
 use Illuminate\Http\Request;
 use Validator;
+use App\Tag;
 
 class BookController extends APIBaseController
 {
@@ -16,7 +17,7 @@ class BookController extends APIBaseController
      */
     public function index()
     {
-        $books = Book::paginate(20);
+        $books = Book::paginate(15);
         if (count($books) < 1) {
             return $this->sendMessage('Found 0 book');
         }
@@ -37,16 +38,12 @@ class BookController extends APIBaseController
      */
     public function store(Request $request)
     {
-        $db_book = Book::get();
-        foreach ($db_book as $result) {
-            if ($request->slug == $result->slug) {
-                return $this->sendError('This book already exits, please enter another name & slug !');
-            }
+        if (Book::where('name', $request->name)->first()) {
+            return $this->sendError('This book already exits, please enter another name !');
         }
         $input = $request->all();
         $validator = Validator::make($input, [
             'name' => 'required',
-            'slug' => 'required',
             'image' => 'required',
             'price' => 'required',
             'highlights' => 'required',
@@ -56,7 +53,6 @@ class BookController extends APIBaseController
             'id_category' => 'required',
         ], [
             'name.required' => 'Please enter book name',
-            'slug.required' => 'Please enter slug',
             'image.required' => 'Please enter book image',
             'price.required' => 'Please enter price',
             'highlights.required' => 'Please choose type highlights',
@@ -68,7 +64,15 @@ class BookController extends APIBaseController
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-        $book = Book::create($input);
+        $book = new Book;
+        $book->name = $input['name'];
+        $book->slug = str_slug($request->name);
+        $book->price = $input['price'];
+        $book->highlights = $input['highlights'];
+        $book->description = $input['description'];
+        $book->quantity = $input['quantity'];
+        $book->id_author = $input['id_author'];
+        $book->id_category = $input['id_category'];
         if ($request->hasFile('image')) {
             $file = $request->file('image');
             $file->move('./images', $file->getClientOriginalName('image'));
@@ -76,6 +80,13 @@ class BookController extends APIBaseController
             $book->image = $image;
         }
         $book->save();
+        // if($request->create_tag){
+        //     $tag = new Tag;
+        //     $tag->name = $request->tag_name;
+        //     $tag->slug = str_slug($tag->name);
+        //     $tag->save();
+        // }
+        $book->tags()->attach($request->id_tag);
         return $this->sendResponse($book->toArray(), 'Book created successfully.');
     }
 
@@ -113,18 +124,14 @@ class BookController extends APIBaseController
         if (is_null($book)) {
             return $this->sendError('Book not found.');
         }
-        if ($book->slug !== $request->slug) {
-            $db_book = Book::get();
-            foreach ($db_book as $result) {
-                if ($request->slug == $result->slug) {
-                    return $this->sendError('This book already exits, please enter another name & slug !');
-                }
+        if ($book->name !== $request->name) {
+            if (Book::where('name', $request->name)->first()) {
+                return $this->sendError('This book already exits, please enter another name !');
             }
         }
         $input = $request->all();
         $validator = Validator::make($input, [
             'name' => 'required',
-            'slug' => 'required',
             'price' => 'required',
             'highlights' => 'required',
             'description' => 'required',
@@ -133,7 +140,6 @@ class BookController extends APIBaseController
             'id_category' => 'required',
         ], [
             'name.required' => 'Please enter book name',
-            'slug.required' => 'Please enter slug',
             'price.required' => 'Please enter price',
             'highlights.required' => 'Please choose type highlights',
             'description.required' => 'Please enter book description',
@@ -152,7 +158,7 @@ class BookController extends APIBaseController
             $book->image = $image;
         }
         $book->name = $input['name'];
-        $book->slug = $input['slug'];
+        $book->slug = str_slug($input['name']);
         $book->price = $input['price'];
         $book->highlights = $input['highlights'];
         $book->description = $input['description'];

@@ -36,11 +36,8 @@ class UserController extends APIBaseController
 
     public function create(Request $request)
     {
-        $db_user = User::get();
-        foreach ($db_user as $results) {
-            if ($request->email == $results->email) {
-                return $this->sendError('Email already exits, please enter another email !');
-            }
+        if(User::where('email', $request->email)->first()){
+            return $this->sendError('Email already exits, please enter another email !');
         }
         $input = $request->all();
         $validator = Validator::make($input, [
